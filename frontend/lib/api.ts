@@ -74,8 +74,33 @@ export const profileAPI = {
 
 // Universities API
 export const universitiesAPI = {
+  // ✅ FIX 1: Point to the correct backend route (/recommendations)
   getUniversities: async () => {
-    const response = await apiRequest('/universities');
+    const response = await apiRequest('/universities/recommendations');
+    return response.json();
+  },
+
+  // ✅ FIX 2: Split logic to hit the correct Backend Endpoint
+  updateShortlistStatus: async (
+    universityId: string,
+    status: 'shortlisted' | 'locked' | 'applied' | 'removed',
+    tag?: string
+  ) => {
+    
+    // CASE A: If we are LOCKING, use the PUT /lock endpoint
+    if (status === 'locked') {
+      const response = await apiRequest('/universities/lock', {
+        method: 'PUT',
+        body: JSON.stringify({ universityId }),
+      });
+      return response.json();
+    }
+
+    // CASE B: If we are SHORTLISTING, use the POST /shortlist endpoint
+    const response = await apiRequest('/universities/shortlist', {
+      method: 'POST',
+      body: JSON.stringify({ universityId, category: tag }), // Map 'tag' to 'category' if needed
+    });
     return response.json();
   },
 };

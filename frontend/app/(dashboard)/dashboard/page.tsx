@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { mockUserProfile, mockTasks, mockUniversities, STAGES } from "@/lib/mock-data";
+import { mockTasks, STAGES } from "@/lib/mock-data"; 
 import {
   GraduationCap,
   Globe,
@@ -19,18 +21,103 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useState } from "react";
 import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  
+  // State for Real Data
+  const [user, setUser] = useState<any>(null);
+  const [universities, setUniversities] = useState<any[]>([]); // Store University Data
   const [tasks, setTasks] = useState(mockTasks);
-  const currentStage = mockUserProfile.currentStage;
-  const completedTasks = tasks.filter((t) => t.isCompleted).length;
-  const shortlistedUniversities = mockUniversities.filter((u) => u.isShortlisted);
-  const lockedUniversities = mockUniversities.filter((u) => u.isLocked);
+  const [loading, setLoading] = useState(true);
+
+  // 1. AUTH & DATA FETCHING
+  useEffect(() => {
+    const checkAuthAndFetch = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.log("No token found. Redirecting...");
+        router.push("/login");
+        return;
+      }
+
+      try {
+        // Fetch Profile AND Universities in parallel
+        const [profileRes, unisRes] = await Promise.all([
+          fetch("http://localhost:5000/api/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("http://localhost:5000/api/universities/recommendations", {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        ]);
+
+        if (profileRes.status === 401 || unisRes.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          setUser(profileData);
+        }
+
+        if (unisRes.ok) {
+          const unisData = await unisRes.json();
+          setUniversities(unisData);
+        }
+
+      } catch (error) {
+        console.error("Dashboard Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndFetch();
+  }, [router]);
+
+  // 2. DATA MAPPING
+  // Calculate specific lists based on the fetched University Data
+  const shortlistedList = universities.filter((u: any) => u.isShortlisted);
+  const lockedList = universities.filter((u: any) => u.isLocked);
+
+  const displayProfile = user ? {
+    firstName: user.name?.split(" ")[0] || "Student",
+    currentStage: user.journeyStage || 1,
+    degree: user.preferences?.targetDegree || "Master's",
+    major: user.profile?.major || "General Studies",
+    educationLevel: user.profile?.educationLevel || "Bachelor's Degree",
+    intake: user.preferences?.targetIntake || "Fall 2025",
+    countries: user.preferences?.preferredCountries?.length > 0 
+      ? user.preferences.preferredCountries 
+      : ["United States", "Germany"],
+    budget: user.preferences?.budgetRange || "$30k - $50k",
+    ielts: user.readiness?.englishTestStatus || "Not Started",
+    gre: user.readiness?.standardizedTestStatus || "Not Started",
+    sop: user.readiness?.sopStatus || "Not Started",
+    // Use the calculated lists from the university API
+    shortlisted: shortlistedList,
+    locked: lockedList,
+  } : null;
+
+  // 3. PROFILE STRENGTH CALC
+  const getProfileStrength = () => {
+    if (!user) return 0;
+    let score = 0;
+    if (user.profile?.gpa) score += 25;
+    if (displayProfile?.ielts === "Completed") score += 25;
+    if (displayProfile?.gre === "Completed") score += 25;
+    if (displayProfile?.sop === "Completed") score += 25;
+    return score || 15; // Default score
+  };
 
   const toggleTask = (taskId: string) => {
     setTasks((prev) =>
@@ -40,15 +127,21 @@ export default function DashboardPage() {
     );
   };
 
-  const getProfileStrength = () => {
-    let score = 0;
-    if (mockUserProfile.gpa) score += 25;
-    if (mockUserProfile.ieltsStatus === "Completed") score += 25;
-    if (mockUserProfile.greStatus === "Completed") score += 25;
-    if (mockUserProfile.sopStatus === "Finalized") score += 25;
-    return score;
-  };
+  // 4. LOADING STATE
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50/50">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+          <span className="text-lg font-medium text-gray-500">Loading your dashboard...</span>
+        </div>
+      </div>
+    );
+  }
 
+  if (!displayProfile) return null;
+
+  const completedTasks = tasks.filter((t) => t.isCompleted).length;
   const profileStrength = getProfileStrength();
 
   return (
@@ -60,7 +153,7 @@ export default function DashboardPage() {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-2xl lg:text-3xl font-bold text-balance">
-          Welcome back, {mockUserProfile.fullName.split(" ")[0]}
+          Welcome back, {displayProfile.firstName}
         </h1>
         <p className="text-muted-foreground mt-1">
           Here&apos;s an overview of your study abroad journey
@@ -76,7 +169,7 @@ export default function DashboardPage() {
         <Card className="border-border/50 bg-card/80">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Your Journey</CardTitle>
-            <CardDescription>Current stage: {STAGES[currentStage - 1].name}</CardDescription>
+            <CardDescription>Current stage: {STAGES[displayProfile.currentStage - 1].name}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 mb-4">
@@ -84,26 +177,26 @@ export default function DashboardPage() {
                 <div key={stage.id} className="flex-1 flex items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      stage.id < currentStage
+                      stage.id < displayProfile.currentStage
                         ? "bg-accent text-accent-foreground"
-                        : stage.id === currentStage
+                        : stage.id === displayProfile.currentStage
                         ? "bg-accent/20 text-accent border-2 border-accent"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {stage.id < currentStage ? <CheckCircle className="h-4 w-4" /> : stage.id}
+                    {stage.id < displayProfile.currentStage ? <CheckCircle className="h-4 w-4" /> : stage.id}
                   </div>
                   {index < STAGES.length - 1 && (
                     <div
                       className={`flex-1 h-1 mx-2 rounded ${
-                        stage.id < currentStage ? "bg-accent" : "bg-muted"
+                        stage.id < displayProfile.currentStage ? "bg-accent" : "bg-muted"
                       }`}
                     />
                   )}
                 </div>
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">{STAGES[currentStage - 1].description}</p>
+            <p className="text-sm text-muted-foreground">{STAGES[displayProfile.currentStage - 1].description}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -127,28 +220,28 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">{mockUserProfile.intendedDegree} in {mockUserProfile.fieldOfStudy}</p>
-                  <p className="text-xs text-muted-foreground">{mockUserProfile.educationLevel}</p>
+                  <p className="text-sm font-medium">{displayProfile.degree} in {displayProfile.major}</p>
+                  <p className="text-xs text-muted-foreground">{displayProfile.educationLevel}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">{mockUserProfile.targetIntake}</p>
+                  <p className="text-sm font-medium">{displayProfile.intake}</p>
                   <p className="text-xs text-muted-foreground">Target Intake</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">{mockUserProfile.preferredCountries.join(", ")}</p>
+                  <p className="text-sm font-medium">{displayProfile.countries.join(", ")}</p>
                   <p className="text-xs text-muted-foreground">Preferred Countries</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Wallet className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">{mockUserProfile.budgetRange}</p>
+                  <p className="text-sm font-medium">{displayProfile.budget}</p>
                   <p className="text-xs text-muted-foreground">Annual Budget</p>
                 </div>
               </div>
@@ -185,20 +278,20 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">IELTS/TOEFL</span>
-                  <Badge variant="secondary" className="bg-accent/10 text-accent">
-                    {mockUserProfile.ieltsStatus}
+                  <Badge variant="secondary" className={displayProfile.ielts === "Completed" ? "bg-accent/10 text-accent" : "bg-yellow-500/10 text-yellow-600"}>
+                    {displayProfile.ielts}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">GRE/GMAT</span>
-                  <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600">
-                    {mockUserProfile.greStatus}
+                  <Badge variant="secondary" className={displayProfile.gre === "Completed" ? "bg-accent/10 text-accent" : "bg-yellow-500/10 text-yellow-600"}>
+                    {displayProfile.gre}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">SOP</span>
-                  <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600">
-                    {mockUserProfile.sopStatus}
+                  <Badge variant="secondary" className={displayProfile.sop === "Completed" ? "bg-accent/10 text-accent" : "bg-yellow-500/10 text-yellow-600"}>
+                    {displayProfile.sop}
                   </Badge>
                 </div>
               </div>
@@ -222,28 +315,33 @@ export default function DashboardPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <p className="text-2xl font-bold text-accent">{shortlistedUniversities.length}</p>
+                  <p className="text-2xl font-bold text-accent">{displayProfile.shortlisted.length}</p>
                   <p className="text-xs text-muted-foreground">Shortlisted</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <p className="text-2xl font-bold text-accent">{lockedUniversities.length}</p>
+                  <p className="text-2xl font-bold text-accent">{displayProfile.locked.length}</p>
                   <p className="text-xs text-muted-foreground">Locked</p>
                 </div>
               </div>
 
-              {lockedUniversities.length > 0 && (
+              {displayProfile.locked.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Locked Universities</p>
-                  {lockedUniversities.slice(0, 2).map((uni) => (
-                    <div key={uni.id} className="flex items-center gap-2 text-sm">
+                  {displayProfile.locked.slice(0, 2).map((uni: any) => (
+                    <div key={uni._id || uni.id} className="flex items-center gap-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-accent" />
-                      <span>{uni.name}</span>
+                      <span className="truncate">{uni.name || "University Locked"}</span>
                     </div>
                   ))}
+                  {displayProfile.locked.length > 2 && (
+                    <p className="text-xs text-muted-foreground pl-6">
+                      + {displayProfile.locked.length - 2} more
+                    </p>
+                  )}
                 </div>
               )}
 
-              {lockedUniversities.length === 0 && (
+              {displayProfile.locked.length === 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 text-yellow-600">
                   <AlertCircle className="h-4 w-4" />
                   <p className="text-xs">Lock at least one university to proceed</p>
@@ -261,7 +359,7 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* Bottom section */}
+      {/* Bottom section (To-Do and AI) */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* AI To-Do List */}
         <motion.div
@@ -299,11 +397,7 @@ export default function DashboardPage() {
                       className="mt-0.5"
                     />
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-medium ${
-                          task.isCompleted ? "line-through text-muted-foreground" : ""
-                        }`}
-                      >
+                      <p className={`text-sm font-medium ${task.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                         {task.title}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">

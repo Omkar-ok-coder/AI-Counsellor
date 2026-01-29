@@ -1,24 +1,21 @@
 "use client";
 
-import React from "react"
-
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Mail, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useAuth } from "@/lib/auth-context";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -28,20 +25,51 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
+    // 🛑 DEBUG LOG: Proving we are using HTTP
+    console.log("Attempting Direct Signup to: http://localhost:5000/api/auth/signup");
+
     try {
-      await signup(formData.fullName, formData.email, formData.password);
-      router.push("/onboarding");
+      // ✅ 1. Direct Fetch (Bypassing broken helpers/context)
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.fullName, // Ensure backend expects 'name', not 'fullName'
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Signup failed");
+      }
+
+      // ✅ 2. Success! Save Token & Redirect
+      console.log("Signup Successful. Token received.");
+      localStorage.setItem("token", data.token);
+      
+      // Optional: Store user info if your backend sends it
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      router.push("/dashboard");
+
     } catch (error: any) {
-      alert(error.message || 'Signup failed. Please try again.');
+      console.error("Signup Error:", error);
+      alert(error.message || "Connection Error. Ensure Backend is running on Port 5000");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignup = () => {
-    // Implement Google OAuth
-    console.log("Google signup");
+    console.log("Google signup not implemented yet");
   };
 
   return (
@@ -49,8 +77,9 @@ export default function SignupPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      className="flex h-screen items-center justify-center p-4"
     >
-      <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription>
@@ -59,6 +88,7 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Full Name Input */}
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
               <div className="relative">
@@ -77,6 +107,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -95,6 +126,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Password Input */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -131,7 +163,13 @@ export default function SignupPage() {
               className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </Button>
           </form>
 

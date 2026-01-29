@@ -36,7 +36,7 @@ npm install
      ```
      MONGO_URI=your_mongodb_connection_string
      JWT_SECRET=your_super_secret_jwt_key_123
-     OPENAI_API_KEY=your_openai_api_key_here
+     GEMINI_API_KEY=your_gemini_api_key_here
      PORT=5000
      ```
 
@@ -123,6 +123,6 @@ npm run dev
 ## Notes
 
 - Make sure MongoDB is running before starting the backend server
-- The AI chat feature uses a mock response by default. To enable real AI responses, add your OpenAI API key to the `.env` file and update the `aiController.js`
+- The AI chat feature uses Google Gemini API. Make sure to add your Gemini API key to the `.env` file as `GEMINI_API_KEY`
 - JWT tokens are stored in localStorage on the frontend
 - Protected routes require authentication via JWT token
