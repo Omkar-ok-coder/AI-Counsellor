@@ -84,7 +84,7 @@ export default function UniversitiesPage() {
           return;
         }
 
-        const res = await fetch("http://localhost:5000/api/universities/recommendations", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/universities/recommendations`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -197,7 +197,7 @@ export default function UniversitiesPage() {
 
     try {
       const token = localStorage.getItem("token");
-      await fetch("http://localhost:5000/api/universities/shortlist", {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/universities/shortlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         // ✅ FIX: Send the correct status ('shortlisted' or 'removed')
@@ -220,7 +220,7 @@ export default function UniversitiesPage() {
 
       try {
         const token = localStorage.getItem("token");
-        await fetch("http://localhost:5000/api/universities/lock", {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/universities/lock`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           // ✅ FIX: Send status: 'locked' so the backend saves it
@@ -241,7 +241,7 @@ export default function UniversitiesPage() {
 
       try {
         const token = localStorage.getItem("token");
-        await fetch("http://localhost:5000/api/universities/lock", {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/universities/lock`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           // ✅ FIX: Send status: 'shortlisted' to revert to shortlisted state
