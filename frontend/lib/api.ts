@@ -14,10 +14,10 @@ const apiRequest = async (
   options: RequestInit = {}
 ): Promise<Response> => {
   const token = getToken();
-  
-  const headers: HeadersInit = {
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -86,7 +86,7 @@ export const universitiesAPI = {
     status: 'shortlisted' | 'locked' | 'applied' | 'removed',
     tag?: string
   ) => {
-    
+
     // CASE A: If we are LOCKING, use the PUT /lock endpoint
     if (status === 'locked') {
       const response = await apiRequest('/universities/lock', {
@@ -107,10 +107,10 @@ export const universitiesAPI = {
 
 // AI API
 export const aiAPI = {
-  chat: async (message: string) => {
+  chat: async (message: string, history: any[] = []) => {
     const response = await apiRequest('/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     });
     return response.json();
   },

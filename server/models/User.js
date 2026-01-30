@@ -4,7 +4,8 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  
+  profileCreated: { type: Boolean, default: false },
+
   // Profile Information
   profile: {
     educationLevel: { type: String, default: "Bachelor's Degree" },
@@ -12,6 +13,10 @@ const userSchema = new mongoose.Schema({
     gpa: { type: Number },
     graduationYear: { type: Number },
     targetDegree: { type: String, default: "Master's" },
+    targetIntake: { type: String },
+    ieltsStatus: { type: String, default: 'Not Started' },
+    greStatus: { type: String, default: 'Not Started' },
+    sopStatus: { type: String, default: 'Not Started' },
     preferredCountries: [{ type: String }],
     budgetRange: { type: String },
   },

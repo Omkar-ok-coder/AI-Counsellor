@@ -8,6 +8,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  profileCreated: boolean;
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
   isAuthenticated: boolean;
 }
 
@@ -33,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
-      
+
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -46,11 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await authAPI.login(email, password);
       setToken(data.token);
-      setUser({ _id: data._id, name: data.name, email: data.email });
-      
+      setUser({ _id: data._id, name: data.name, email: data.email, profileCreated: data.profileCreated });
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify({ _id: data._id, name: data.name, email: data.email }));
+        localStorage.setItem('user', JSON.stringify({ _id: data._id, name: data.name, email: data.email, profileCreated: data.profileCreated }));
       }
     } catch (error: any) {
       throw new Error(error.message || 'Login failed');
@@ -61,11 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await authAPI.signup(name, email, password);
       setToken(data.token);
-      setUser({ _id: data._id, name: data.name, email: data.email });
-      
+      setUser({ _id: data._id, name: data.name, email: data.email, profileCreated: data.profileCreated });
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify({ _id: data._id, name: data.name, email: data.email }));
+        localStorage.setItem('user', JSON.stringify({ _id: data._id, name: data.name, email: data.email, profileCreated: data.profileCreated }));
       }
     } catch (error: any) {
       throw new Error(error.message || 'Signup failed');
@@ -75,13 +77,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setToken(null);
     setUser(null);
-    
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
-    
+
     router.push('/login');
+  };
+
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    }
   };
 
   return (
@@ -93,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        updateUser,
         isAuthenticated: !!token && !!user,
       }}
     >

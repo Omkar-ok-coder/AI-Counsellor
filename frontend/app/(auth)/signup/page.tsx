@@ -15,7 +15,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -52,7 +52,7 @@ export default function SignupPage() {
       // ✅ 2. Success! Save Token & Redirect
       console.log("Signup Successful. Token received.");
       localStorage.setItem("token", data.token);
-      
+
       // Optional: Store user info if your backend sends it
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
@@ -79,10 +79,10 @@ export default function SignupPage() {
       transition={{ duration: 0.5 }}
       className="flex h-screen items-center justify-center p-4"
     >
-      <Card className="w-full max-w-md border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-amber-500/20 shadow-xl bg-black/40 backdrop-blur-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-amber-500">Create an account</CardTitle>
+          <CardDescription className="text-gray-400">
             Start your study abroad journey today
           </CardDescription>
         </CardHeader>
@@ -101,9 +101,9 @@ export default function SignupPage() {
                     setFormData({ ...formData, fullName: e.target.value })
                   }
                   required
-                  className="pr-10"
+                  className="pr-10 bg-black/50 border-white/10 focus-visible:ring-amber-500"
                 />
-                <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
             </div>
 
@@ -120,9 +120,9 @@ export default function SignupPage() {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   required
-                  className="pr-10"
+                  className="pr-10 bg-black/50 border-white/10 focus-visible:ring-amber-500"
                 />
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
             </div>
 
@@ -139,7 +139,7 @@ export default function SignupPage() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                   required
-                  className="pr-10"
+                  className="pr-10 bg-black/50 border-white/10 focus-visible:ring-amber-500"
                 />
                 <button
                   type="button"
@@ -160,7 +160,7 @@ export default function SignupPage() {
 
             <Button
               type="submit"
-              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -175,14 +175,14 @@ export default function SignupPage() {
 
           <div className="relative my-6">
             <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-2 text-xs text-gray-400">
               or continue with
             </span>
           </div>
 
           <Button
             variant="outline"
-            className="w-full bg-transparent"
+            className="w-full bg-transparent border-amber-500/50 text-white hover:bg-amber-500/10 hover:text-amber-400"
             onClick={handleGoogleSignup}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -208,11 +208,11 @@ export default function SignupPage() {
 
           <p className="mt-4 text-xs text-center text-muted-foreground">
             By creating an account, you agree to our{" "}
-            <Link href="/terms" className="text-accent hover:underline">
+            <Link href="/terms" className="text-amber-500 hover:text-amber-400 hover:underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="text-accent hover:underline">
+            <Link href="/privacy" className="text-amber-500 hover:text-amber-400 hover:underline">
               Privacy Policy
             </Link>
           </p>
@@ -220,7 +220,7 @@ export default function SignupPage() {
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="text-accent hover:underline font-medium">
+            <Link href="/login" className="text-amber-500 hover:text-amber-400 hover:underline font-medium">
               Sign in
             </Link>
           </p>

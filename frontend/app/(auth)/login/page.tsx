@@ -27,7 +27,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await login(formData.email, formData.password);
       router.push("/dashboard");
@@ -49,10 +49,10 @@ export default function LoginPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
+      <Card className="border-amber-500/20 shadow-xl bg-black/40 backdrop-blur-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-amber-500">Welcome back</CardTitle>
+          <CardDescription className="text-gray-400">
             Sign in to continue your study abroad journey
           </CardDescription>
         </CardHeader>
@@ -70,9 +70,9 @@ export default function LoginPage() {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   required
-                  className="pr-10"
+                  className="pr-10 bg-black/50 border-white/10 focus-visible:ring-amber-500"
                 />
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
             </div>
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-accent hover:underline"
+                  className="text-sm text-amber-500 hover:text-amber-400 hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                   required
-                  className="pr-10"
+                  className="pr-10 bg-black/50 border-white/10 focus-visible:ring-amber-500"
                 />
                 <button
                   type="button"
@@ -114,7 +114,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
@@ -123,14 +123,14 @@ export default function LoginPage() {
 
           <div className="relative my-6">
             <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-2 text-xs text-gray-400">
               or continue with
             </span>
           </div>
 
           <Button
             variant="outline"
-            className="w-full bg-transparent"
+            className="w-full bg-transparent border-amber-500/50 text-white hover:bg-amber-500/10 hover:text-amber-400"
             onClick={handleGoogleLogin}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -157,7 +157,7 @@ export default function LoginPage() {
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-accent hover:underline font-medium">
+            <Link href="/signup" className="text-amber-500 hover:text-amber-400 hover:underline font-medium">
               Sign up
             </Link>
           </p>

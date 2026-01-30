@@ -140,27 +140,27 @@ export default function UniversitiesPage() {
   // Helper functions
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "dream": return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-      case "target": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-      case "safe": return "bg-green-500/10 text-green-600 border-green-500/20";
+      case "dream": return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+      case "target": return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+      case "safe": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getAcceptanceColor = (chance: string) => {
     switch (chance) {
-      case "high": return "text-green-600";
-      case "medium": return "text-yellow-600";
-      case "low": return "text-red-500";
+      case "high": return "text-emerald-400";
+      case "medium": return "text-amber-400";
+      case "low": return "text-rose-400";
       default: return "text-muted-foreground";
     }
   };
 
   const getCostColor = (level: string) => {
     switch (level) {
-      case "low": return "text-green-600";
-      case "medium": return "text-yellow-600";
-      case "high": return "text-red-500";
+      case "low": return "text-emerald-400";
+      case "medium": return "text-amber-400";
+      case "high": return "text-rose-400";
       default: return "text-muted-foreground";
     }
   };
@@ -255,7 +255,11 @@ export default function UniversitiesPage() {
 
   const UniversityCard = ({ university }: { university: University }) => (
     <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-      <Card className={`border-border/50 bg-card/80 hover:shadow-lg transition-all cursor-pointer ${university.isLocked ? "ring-2 ring-accent" : ""}`} onClick={() => setSelectedUniversity(university)}>
+      <Card
+        className={`border-white/10 bg-black/40 backdrop-blur-md hover:shadow-xl hover:shadow-cyan-500/10 hover:border-cyan-500/50 transition-all duration-300 cursor-pointer active:scale-[0.99] group ${university.isLocked ? "ring-2 ring-rose-500 shadow-rose-500/20" : ""
+          }`}
+        onClick={() => setSelectedUniversity(university)}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -276,16 +280,16 @@ export default function UniversitiesPage() {
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-3 w-3" />Deadline: {university.deadline}</div>
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-            <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => toggleShortlist(university.id)}>
+            <Button variant="outline" size="sm" className={`flex-1 bg-transparent hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/50 ${university.isShortlisted ? "text-emerald-400 border-emerald-500/50" : ""}`} onClick={() => toggleShortlist(university.id)}>
               {university.isShortlisted ? <><Minus className="h-4 w-4 mr-1" />Remove</> : <><Plus className="h-4 w-4 mr-1" />Shortlist</>}
             </Button>
-            <Button variant={university.isLocked ? "secondary" : "default"} size="sm" className={`flex-1 ${!university.isLocked ? "bg-accent hover:bg-accent/90 text-accent-foreground" : ""}`} onClick={() => toggleLock(university)}>
+            <Button variant={university.isLocked ? "secondary" : "default"} size="sm" className={`flex-1 ${!university.isLocked ? "bg-accent hover:bg-accent/90 text-accent-foreground" : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20"}`} onClick={() => toggleLock(university)}>
               {university.isLocked ? <><Unlock className="h-4 w-4 mr-1" />Unlock</> : <><Lock className="h-4 w-4 mr-1" />Lock</>}
             </Button>
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </motion.div >
   );
 
   // ERROR DISPLAY
@@ -316,7 +320,13 @@ export default function UniversitiesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div><h1 className="text-2xl lg:text-3xl font-bold flex items-center gap-2"><GraduationCap className="h-7 w-7 text-accent" />Universities</h1><p className="text-muted-foreground mt-1">Discover and shortlist universities that match your profile</p></div>
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold flex items-center gap-2 text-amber-500">
+            <GraduationCap className="h-7 w-7 text-amber-500" />
+            Universities
+          </h1>
+          <p className="text-muted-foreground mt-1">Discover and shortlist universities that match your profile</p>
+        </div>
         <div className="flex items-center gap-2"><Badge variant="secondary" className="text-sm">{shortlistedUniversities.length} Shortlisted</Badge><Badge variant="secondary" className="bg-accent/10 text-accent text-sm">{lockedUniversities.length} Locked</Badge></div>
       </div>
 
@@ -330,7 +340,7 @@ export default function UniversitiesPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-5 bg-black/40 backdrop-blur-md border border-white/10">
           <TabsTrigger value="all">All ({universities.length})</TabsTrigger>
           <TabsTrigger value="shortlisted">Shortlisted ({shortlistedUniversities.length})</TabsTrigger>
           <TabsTrigger value="dream">Dream ({dreamUniversities.length})</TabsTrigger>
@@ -363,13 +373,13 @@ export default function UniversitiesPage() {
               <DialogDescription className="flex items-center gap-1"><MapPin className="h-4 w-4" />{selectedUniversity.city}, {selectedUniversity.country} | Ranking: #{selectedUniversity.ranking}</DialogDescription>
             </DialogHeader>
             <div className="space-y-6 py-4">
-               {/* Details Content here */}
-               <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-muted/50"><DollarSign className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className={`font-medium ${getCostColor(selectedUniversity.costLevel)}`}>{selectedUniversity.tuitionFee}</p><p className="text-xs text-muted-foreground">Tuition/year</p></div>
-                  <div className="text-center p-3 rounded-lg bg-muted/50"><TrendingUp className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className={`font-medium capitalize ${getAcceptanceColor(selectedUniversity.acceptanceChance)}`}>{selectedUniversity.acceptanceChance}</p><p className="text-xs text-muted-foreground">Acceptance Chance</p></div>
-                  <div className="text-center p-3 rounded-lg bg-muted/50"><Calendar className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className="font-medium">{selectedUniversity.deadline}</p><p className="text-xs text-muted-foreground">Deadline</p></div>
-               </div>
-               <div><h4 className="font-medium mb-2 flex items-center gap-2"><GraduationCap className="h-4 w-4 text-accent" />Available Programs</h4><div className="flex flex-wrap gap-2">{selectedUniversity.programs.map((program) => (<Badge key={program} variant="secondary">{program}</Badge>))}</div></div>
+              {/* Details Content here */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-lg bg-muted/50"><DollarSign className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className={`font-medium ${getCostColor(selectedUniversity.costLevel)}`}>{selectedUniversity.tuitionFee}</p><p className="text-xs text-muted-foreground">Tuition/year</p></div>
+                <div className="text-center p-3 rounded-lg bg-muted/50"><TrendingUp className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className={`font-medium capitalize ${getAcceptanceColor(selectedUniversity.acceptanceChance)}`}>{selectedUniversity.acceptanceChance}</p><p className="text-xs text-muted-foreground">Acceptance Chance</p></div>
+                <div className="text-center p-3 rounded-lg bg-muted/50"><Calendar className="h-5 w-5 mx-auto mb-1 text-muted-foreground" /><p className="font-medium">{selectedUniversity.deadline}</p><p className="text-xs text-muted-foreground">Deadline</p></div>
+              </div>
+              <div><h4 className="font-medium mb-2 flex items-center gap-2"><GraduationCap className="h-4 w-4 text-accent" />Available Programs</h4><div className="flex flex-wrap gap-2">{selectedUniversity.programs.map((program) => (<Badge key={program} variant="secondary">{program}</Badge>))}</div></div>
             </div>
             <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => { toggleShortlist(selectedUniversity.id); setSelectedUniversity({ ...selectedUniversity, isShortlisted: !selectedUniversity.isShortlisted }); }}>

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Send,
   Bot,
@@ -67,17 +66,24 @@ export default function CounsellorPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
 
   const generateResponse = async (userMessage: string): Promise<Message> => {
     try {
       // Call backend AI API
-      const data = await aiAPI.chat(userMessage);
+      // Call backend AI API with History
+      // Filter out the very first "welcome" message context if needed, or keep it.
+      // We map the messages to simple objects to avoid sending too much React state data.
+      const conversationHistory = messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const data = await aiAPI.chat(userMessage, conversationHistory);
       return {
         id: Date.now().toString(),
         role: "assistant",
@@ -88,13 +94,13 @@ export default function CounsellorPage() {
     } catch (error) {
       // Fallback to mock response if API fails
       const lowerMessage = userMessage.toLowerCase();
-      
+
       let response = "";
       let actions: Message["actions"] = [];
 
-    if (lowerMessage.includes("stanford") || lowerMessage.includes("chances")) {
-      const stanford = mockUniversities.find(u => u.name.includes("Stanford"));
-      response = `Let me analyze your chances at Stanford based on your profile:
+      if (lowerMessage.includes("stanford") || lowerMessage.includes("chances")) {
+        const stanford = mockUniversities.find(u => u.name.includes("Stanford"));
+        response = `Let me analyze your chances at Stanford based on your profile:
 
 **Stanford University Analysis:**
 
@@ -113,17 +119,17 @@ export default function CounsellorPage() {
 **Recommendation:** Apply to Stanford, but ensure you have "Target" and "Safe" schools in your list too.
 
 Would you like me to suggest some target schools that match your profile?`;
-      
-      actions = [
-        { type: "shortlist", label: "Add Stanford to shortlist", data: { universityId: stanford?.id } },
-        { type: "add_task", label: "Add GRE prep task", data: { title: "Score 325+ on GRE" } },
-      ];
-    } else if (lowerMessage.includes("recommend") || lowerMessage.includes("universities")) {
-      const dream = mockUniversities.filter(u => u.category === "dream");
-      const target = mockUniversities.filter(u => u.category === "target");
-      const safe = mockUniversities.filter(u => u.category === "safe");
 
-      response = `Based on your profile, here are my university recommendations categorized by acceptance likelihood:
+        actions = [
+          { type: "shortlist", label: "Add Stanford to shortlist", data: { universityId: stanford?.id } },
+          { type: "add_task", label: "Add GRE prep task", data: { title: "Score 325+ on GRE" } },
+        ];
+      } else if (lowerMessage.includes("recommend") || lowerMessage.includes("universities")) {
+        const dream = mockUniversities.filter(u => u.category === "dream");
+        const target = mockUniversities.filter(u => u.category === "target");
+        const safe = mockUniversities.filter(u => u.category === "safe");
+
+        response = `Based on your profile, here are my university recommendations categorized by acceptance likelihood:
 
 **Dream Schools (Low Acceptance Chance):**
 ${dream.map(u => `- ${u.name} - ${u.country}`).join("\n")}
@@ -139,11 +145,11 @@ Apply to 1-2 Dream schools, 3-4 Target schools, and 2 Safe schools. This gives y
 
 Would you like me to explain why each university fits your profile, or help you shortlist specific ones?`;
 
-      actions = [
-        { type: "navigate", label: "View all universities", data: { path: "/universities" } },
-      ];
-    } else if (lowerMessage.includes("improve") || lowerMessage.includes("profile") || lowerMessage.includes("focus")) {
-      response = `Let me analyze your profile and suggest areas for improvement:
+        actions = [
+          { type: "navigate", label: "View all universities", data: { path: "/universities" } },
+        ];
+      } else if (lowerMessage.includes("improve") || lowerMessage.includes("profile") || lowerMessage.includes("focus")) {
+        response = `Let me analyze your profile and suggest areas for improvement:
 
 **Current Profile Strength: 50%**
 
@@ -174,11 +180,11 @@ Would you like me to explain why each university fits your profile, or help you 
 
 Should I create a detailed action plan with deadlines for these improvements?`;
 
-      actions = [
-        { type: "add_task", label: "Create action plan", data: { title: "Complete profile improvement plan" } },
-      ];
-    } else if (lowerMessage.includes("timeline") || lowerMessage.includes("deadline")) {
-      response = `Here's your application timeline for ${mockUserProfile.targetIntake}:
+        actions = [
+          { type: "add_task", label: "Create action plan", data: { title: "Complete profile improvement plan" } },
+        ];
+      } else if (lowerMessage.includes("timeline") || lowerMessage.includes("deadline")) {
+        response = `Here's your application timeline for ${mockUserProfile.targetIntake}:
 
 **Immediate (Next 2 weeks):**
 - Register for GRE exam
@@ -206,11 +212,11 @@ ${mockUniversities.filter(u => u.isShortlisted).map(u => `- ${u.name}: ${u.deadl
 
 Would you like me to add these milestones to your task list?`;
 
-      actions = [
-        { type: "add_task", label: "Add timeline tasks", data: { title: "Application timeline tasks" } },
-      ];
-    } else {
-      response = `That's a great question! Let me help you with that.
+        actions = [
+          { type: "add_task", label: "Add timeline tasks", data: { title: "Application timeline tasks" } },
+        ];
+      } else {
+        response = `That's a great question! Let me help you with that.
 
 Based on my analysis of your profile and goals, here are some thoughts:
 
@@ -226,7 +232,7 @@ Is there something specific about your study abroad journey you'd like to explor
 - Document preparation guidance
 
 Feel free to ask me anything!`;
-    }
+      }
 
       return {
         id: Date.now().toString(),
@@ -290,9 +296,9 @@ Feel free to ask me anything!`;
       </div>
 
       {/* Chat container */}
-      <Card className="flex-1 flex flex-col border-border/50 bg-card/80 overflow-hidden">
+      <Card className="flex-1 flex flex-col border-border/50 bg-card/80 overflow-hidden relative">
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto p-4 content-start" ref={scrollRef}>
           <div className="space-y-4">
             <AnimatePresence mode="popLayout">
               {messages.map((message) => (
@@ -301,9 +307,8 @@ Feel free to ask me anything!`;
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "flex-row-reverse" : ""
-                  }`}
+                  className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""
+                    }`}
                 >
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarFallback
@@ -321,16 +326,14 @@ Feel free to ask me anything!`;
                     </AvatarFallback>
                   </Avatar>
                   <div
-                    className={`flex-1 max-w-[80%] ${
-                      message.role === "user" ? "text-right" : ""
-                    }`}
+                    className={`flex-1 max-w-[80%] ${message.role === "user" ? "text-right" : ""
+                      }`}
                   >
                     <div
-                      className={`inline-block p-4 rounded-2xl ${
-                        message.role === "user"
-                          ? "bg-accent text-accent-foreground rounded-tr-sm"
-                          : "bg-muted rounded-tl-sm"
-                      }`}
+                      className={`inline-block p-4 rounded-2xl ${message.role === "user"
+                        ? "bg-accent text-accent-foreground rounded-tr-sm"
+                        : "bg-muted rounded-tl-sm"
+                        }`}
                     >
                       <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none dark:prose-invert">
                         {message.content.split("\n").map((line, i) => {
@@ -352,7 +355,7 @@ Feel free to ask me anything!`;
                         })}
                       </div>
                     </div>
-                    
+
                     {/* Action buttons */}
                     {message.actions && message.actions.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -378,7 +381,7 @@ Feel free to ask me anything!`;
                         ))}
                       </div>
                     )}
-                    
+
                     <p className="text-xs text-muted-foreground mt-1">
                       {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",
@@ -417,8 +420,10 @@ Feel free to ask me anything!`;
                 </div>
               </motion.div>
             )}
+
+            <div ref={bottomRef} className="h-1" />
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Suggested questions */}
         {messages.length === 1 && (
@@ -472,6 +477,6 @@ Feel free to ask me anything!`;
           </p>
         </form>
       </Card>
-    </div>
+    </div >
   );
 }

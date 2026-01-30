@@ -10,12 +10,23 @@ const universityRoutes = require('./routes/universityRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 
 dotenv.config();
+
+// Connect to Database
+// Note: In serverless, we call this inside routes/handlers, but calling it here initiates the promise
 connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: "*", // Simplify for initial deployment; restrict in production if needed
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+}));
 app.use(express.json());
+
+app.get('/', (req, res) => {
+    res.send('API is running...');
+});
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
@@ -25,4 +36,10 @@ app.use('/api/ai', aiRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Only listen if running locally (not exported)
+if (require.main === module) {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+// Export for Vercel
+module.exports = app;

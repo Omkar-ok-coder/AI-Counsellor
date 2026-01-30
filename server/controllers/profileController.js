@@ -22,6 +22,7 @@ exports.updateProfile = async (req, res) => {
     const user = await User.findById(req.user._id);
     if (user) {
       user.profile = { ...user.profile, ...req.body };
+      user.profileCreated = true;
       const updatedUser = await user.save();
       res.json(updatedUser);
     } else {

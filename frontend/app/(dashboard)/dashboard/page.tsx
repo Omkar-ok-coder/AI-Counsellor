@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { mockTasks, STAGES } from "@/lib/mock-data"; 
+import { mockTasks, STAGES } from "@/lib/mock-data";
+import { profileAPI, universitiesAPI } from "@/lib/api";
 import {
   GraduationCap,
   Globe,
@@ -29,7 +30,7 @@ import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
   const router = useRouter();
-  
+
   // State for Real Data
   const [user, setUser] = useState<any>(null);
   const [universities, setUniversities] = useState<any[]>([]); // Store University Data
@@ -42,40 +43,20 @@ export default function DashboardPage() {
       const token = localStorage.getItem("token");
 
       if (!token) {
-        console.log("No token found. Redirecting...");
         router.push("/login");
         return;
       }
 
       try {
-        // Fetch Profile AND Universities in parallel
-        const [profileRes, unisRes] = await Promise.all([
-          fetch("http://localhost:5000/api/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("http://localhost:5000/api/universities/recommendations", {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+        const [profileData, unisData] = await Promise.all([
+          profileAPI.getProfile(),
+          universitiesAPI.getUniversities()
         ]);
-
-        if (profileRes.status === 401 || unisRes.status === 401) {
-          localStorage.removeItem("token");
-          router.push("/login");
-          return;
-        }
-
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setUser(profileData);
-        }
-
-        if (unisRes.ok) {
-          const unisData = await unisRes.json();
-          setUniversities(unisData);
-        }
-
+        setUser(profileData);
+        setUniversities(unisData);
       } catch (error) {
         console.error("Dashboard Error:", error);
+        // Optional: Redirect on error?
       } finally {
         setLoading(false);
       }
@@ -91,19 +72,23 @@ export default function DashboardPage() {
 
   const displayProfile = user ? {
     firstName: user.name?.split(" ")[0] || "Student",
-    currentStage: user.journeyStage || 1,
-    degree: user.preferences?.targetDegree || "Master's",
+    currentStage: (() => {
+      if (lockedList.length > 0) return 4; // Preparing Applications
+      if (shortlistedList.length > 0) return 3; // Finalizing Universities
+      if (user.profileCreated) return 2; // Discovering Universities
+      return 1; // Building Profile
+    })(),
+    degree: user.profile?.targetDegree || "Master's",
     major: user.profile?.major || "General Studies",
     educationLevel: user.profile?.educationLevel || "Bachelor's Degree",
-    intake: user.preferences?.targetIntake || "Fall 2025",
-    countries: user.preferences?.preferredCountries?.length > 0 
-      ? user.preferences.preferredCountries 
+    intake: user.profile?.targetIntake || "Fall 2025",
+    countries: user.profile?.preferredCountries?.length > 0
+      ? user.profile.preferredCountries
       : ["United States", "Germany"],
-    budget: user.preferences?.budgetRange || "$30k - $50k",
-    ielts: user.readiness?.englishTestStatus || "Not Started",
-    gre: user.readiness?.standardizedTestStatus || "Not Started",
-    sop: user.readiness?.sopStatus || "Not Started",
-    // Use the calculated lists from the university API
+    budget: user.profile?.budgetRange || "$30k - $50k",
+    ielts: user.profile?.ieltsStatus || "Not Started",
+    gre: user.profile?.greStatus || "Not Started",
+    sop: user.profile?.sopStatus || "Not Started",
     shortlisted: shortlistedList,
     locked: lockedList,
   } : null;
@@ -112,10 +97,20 @@ export default function DashboardPage() {
   const getProfileStrength = () => {
     if (!user) return 0;
     let score = 0;
+    // GPA check
     if (user.profile?.gpa) score += 25;
-    if (displayProfile?.ielts === "Completed") score += 25;
-    if (displayProfile?.gre === "Completed") score += 25;
-    if (displayProfile?.sop === "Completed") score += 25;
+
+    // Check status case-insensitively
+    const checkStatus = (status?: string) => {
+      if (!status) return false;
+      const s = status.toLowerCase();
+      return s === "completed" || s === "finalized" || s === "not required";
+    };
+
+    if (checkStatus(displayProfile?.ielts)) score += 25;
+    if (checkStatus(displayProfile?.gre)) score += 25;
+    if (checkStatus(displayProfile?.sop)) score += 25;
+
     return score || 15; // Default score
   };
 
@@ -132,7 +127,7 @@ export default function DashboardPage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50/50">
         <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
           <span className="text-lg font-medium text-gray-500">Loading your dashboard...</span>
         </div>
       </div>
@@ -152,7 +147,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl lg:text-3xl font-bold text-balance">
+        <h1 className="text-2xl lg:text-3xl font-bold text-amber-500 text-balance">
           Welcome back, {displayProfile.firstName}
         </h1>
         <p className="text-muted-foreground mt-1">
@@ -166,31 +161,29 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <Card className="border-border/50 bg-card/80">
+        <Card className="border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.99]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Your Journey</CardTitle>
-            <CardDescription>Current stage: {STAGES[displayProfile.currentStage - 1].name}</CardDescription>
+            <CardTitle className="text-lg text-cyan-400">Your Journey</CardTitle>
+            <CardDescription className="text-gray-400">Current stage: {STAGES[displayProfile.currentStage - 1].name}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 mb-4">
               {STAGES.map((stage, index) => (
                 <div key={stage.id} className="flex-1 flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      stage.id < displayProfile.currentStage
-                        ? "bg-accent text-accent-foreground"
-                        : stage.id === displayProfile.currentStage
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stage.id < displayProfile.currentStage
+                      ? "bg-accent text-accent-foreground"
+                      : stage.id === displayProfile.currentStage
                         ? "bg-accent/20 text-accent border-2 border-accent"
                         : "bg-muted text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     {stage.id < displayProfile.currentStage ? <CheckCircle className="h-4 w-4" /> : stage.id}
                   </div>
                   {index < STAGES.length - 1 && (
                     <div
-                      className={`flex-1 h-1 mx-2 rounded ${
-                        stage.id < displayProfile.currentStage ? "bg-accent" : "bg-muted"
-                      }`}
+                      className={`flex-1 h-1 mx-2 rounded ${stage.id < displayProfile.currentStage ? "bg-accent" : "bg-muted"
+                        }`}
                     />
                   )}
                 </div>
@@ -209,10 +202,10 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Card className="border-border/50 bg-card/80 h-full">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md h-full transition-all duration-300 hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-500/10 active:scale-[0.99]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-accent" />
+              <CardTitle className="text-lg flex items-center gap-2 text-teal-400">
+                <GraduationCap className="h-5 w-5 text-teal-400" />
                 Profile Summary
               </CardTitle>
             </CardHeader>
@@ -260,17 +253,17 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <Card className="border-border/50 bg-card/80 h-full">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md h-full transition-all duration-300 hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-500/10 active:scale-[0.99]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-accent" />
+              <CardTitle className="text-lg flex items-center gap-2 text-rose-400">
+                <FileText className="h-5 w-5 text-rose-400" />
                 Profile Strength
               </CardTitle>
-              <CardDescription>{profileStrength}% complete</CardDescription>
+              <CardDescription className="text-gray-400">{profileStrength}% complete</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Progress value={profileStrength} className="h-2" />
-              
+              <Progress value={profileStrength} className="h-2 bg-white/10 text-rose-500 [&>div]:bg-rose-500" />
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Academics</span>
@@ -305,22 +298,22 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Card className="border-border/50 bg-card/80 h-full">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md h-full transition-all duration-300 hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 active:scale-[0.99]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-accent" />
+              <CardTitle className="text-lg flex items-center gap-2 text-violet-400">
+                <GraduationCap className="h-5 w-5 text-violet-400" />
                 Universities
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <p className="text-2xl font-bold text-accent">{displayProfile.shortlisted.length}</p>
-                  <p className="text-xs text-muted-foreground">Shortlisted</p>
+                <div className="text-center p-3 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-2xl font-bold text-violet-400">{displayProfile.shortlisted.length}</p>
+                  <p className="text-xs text-gray-400">Shortlisted</p>
                 </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <p className="text-2xl font-bold text-accent">{displayProfile.locked.length}</p>
-                  <p className="text-xs text-muted-foreground">Locked</p>
+                <div className="text-center p-3 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-2xl font-bold text-violet-400">{displayProfile.locked.length}</p>
+                  <p className="text-xs text-gray-400">Locked</p>
                 </div>
               </div>
 
@@ -362,34 +355,34 @@ export default function DashboardPage() {
       {/* Bottom section (To-Do and AI) */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* AI To-Do List */}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <Card className="border-border/50 bg-card/80">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-accent" />
+                <CardTitle className="text-lg flex items-center gap-2 text-emerald-400">
+                  <ClipboardList className="h-5 w-5 text-emerald-400" />
                   AI To-Do List
                 </CardTitle>
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
                   {completedTasks}/{tasks.length}
                 </Badge>
               </div>
-              <CardDescription>Tasks generated based on your profile</CardDescription>
+              <CardDescription className="text-gray-400">Tasks generated based on your profile</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {tasks.slice(0, 4).map((task) => (
                   <div
                     key={task.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                      task.isCompleted
-                        ? "bg-muted/50 border-border/50"
-                        : "bg-card border-border hover:border-accent/50"
-                    }`}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${task.isCompleted
+                      ? "bg-muted/50 border-border/50"
+                      : "bg-card border-border hover:border-accent/50"
+                      }`}
                   >
                     <Checkbox
                       checked={task.isCompleted}
@@ -414,13 +407,12 @@ export default function DashboardPage() {
                     </div>
                     <Badge
                       variant="secondary"
-                      className={`text-xs ${
-                        task.priority === "high"
-                          ? "bg-red-500/10 text-red-600"
-                          : task.priority === "medium"
-                          ? "bg-yellow-500/10 text-yellow-600"
-                          : "bg-muted text-muted-foreground"
-                      }`}
+                      className={`text-xs ${task.priority === "high"
+                        ? "bg-red-500/10 text-red-400"
+                        : task.priority === "medium"
+                          ? "bg-orange-500/10 text-orange-400"
+                          : "bg-slate-500/10 text-slate-400"
+                        }`}
                     >
                       {task.priority}
                     </Badge>

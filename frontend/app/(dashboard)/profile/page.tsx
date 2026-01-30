@@ -45,9 +45,11 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { profileAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 
 export default function ProfilePage() {
+  const { user: authUser, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile>(mockUserProfile);
   const [originalProfile, setOriginalProfile] = useState<UserProfile>(mockUserProfile);
   const [hasChanges, setHasChanges] = useState(false);
@@ -69,13 +71,13 @@ export default function ProfilePage() {
           gpa: data.profile?.gpa?.toString() || '',
           intendedDegree: data.profile?.targetDegree || '',
           fieldOfStudy: data.profile?.major || '',
-          targetIntake: '',
+          targetIntake: data.profile?.targetIntake || '',
           preferredCountries: data.profile?.preferredCountries || [],
           budgetRange: data.profile?.budgetRange || '',
           fundingPlan: '',
-          ieltsStatus: '',
-          greStatus: '',
-          sopStatus: '',
+          ieltsStatus: data.profile?.ieltsStatus || '',
+          greStatus: data.profile?.greStatus || '',
+          sopStatus: data.profile?.sopStatus || '',
           onboardingComplete: true,
           currentStage: 1,
         };
@@ -118,11 +120,18 @@ export default function ProfilePage() {
         gpa: profile.gpa ? parseFloat(profile.gpa) : undefined,
         graduationYear: profile.graduationYear ? parseInt(profile.graduationYear) : undefined,
         targetDegree: profile.intendedDegree,
+        targetIntake: profile.targetIntake,
+        ieltsStatus: profile.ieltsStatus,
+        greStatus: profile.greStatus,
+        sopStatus: profile.sopStatus,
         preferredCountries: profile.preferredCountries || [],
         budgetRange: profile.budgetRange,
       };
 
       await profileAPI.updateProfile(profileData);
+      if (authUser) {
+        updateUser({ name: profile.fullName, email: profile.email, profileCreated: true });
+      }
       setOriginalProfile(profile);
       setHasChanges(false);
       setShowSaveDialog(false);
@@ -191,11 +200,11 @@ export default function ProfilePage() {
 
       {/* Change warning */}
       {hasChanges && (
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
+        <Card className="border-amber-500/30 bg-amber-500/5 backdrop-blur-md">
           <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
             <div>
-              <p className="font-medium text-sm">Profile changes detected</p>
+              <p className="font-medium text-sm text-amber-500">Profile changes detected</p>
               <p className="text-xs text-muted-foreground">
                 Saving changes will recalculate your university recommendations and update your acceptance chances
               </p>
@@ -206,7 +215,7 @@ export default function ProfilePage() {
 
       {/* Profile Tabs */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 bg-black/40 backdrop-blur-md border border-white/10">
           <TabsTrigger value="personal" className="flex items-center gap-1">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
@@ -227,10 +236,10 @@ export default function ProfilePage() {
 
         {/* Personal Information */}
         <TabsContent value="personal">
-          <Card className="border-border/50 bg-card/80">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-accent" />
+              <CardTitle className="flex items-center gap-2 text-cyan-400">
+                <User className="h-5 w-5 text-cyan-400" />
                 Personal Information
               </CardTitle>
               <CardDescription>Your basic account information</CardDescription>
@@ -238,18 +247,20 @@ export default function ProfilePage() {
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName" className="text-gray-300">Full Name</Label>
                   <Input
                     id="fullName"
+                    className="bg-white/5 border-white/10 focus:border-amber-500/50"
                     value={profile.fullName}
                     onChange={(e) => updateProfile({ fullName: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-gray-300">Email</Label>
                   <Input
                     id="email"
                     type="email"
+                    className="bg-white/5 border-white/10 focus:border-amber-500/50"
                     value={profile.email}
                     onChange={(e) => updateProfile({ email: e.target.value })}
                   />
@@ -261,10 +272,10 @@ export default function ProfilePage() {
 
         {/* Academic Background */}
         <TabsContent value="academic">
-          <Card className="border-border/50 bg-card/80">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-accent" />
+              <CardTitle className="flex items-center gap-2 text-violet-400">
+                <GraduationCap className="h-5 w-5 text-violet-400" />
                 Academic Background
               </CardTitle>
               <CardDescription>Your educational history and qualifications</CardDescription>
@@ -290,9 +301,10 @@ export default function ProfilePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="degree">Degree / Major</Label>
+                  <Label htmlFor="degree" className="text-gray-300">Degree / Major</Label>
                   <Input
                     id="degree"
+                    className="bg-white/5 border-white/10 focus:border-amber-500/50"
                     value={profile.degree}
                     onChange={(e) => updateProfile({ degree: e.target.value })}
                   />
@@ -319,9 +331,10 @@ export default function ProfilePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gpa">GPA / Percentage</Label>
+                  <Label htmlFor="gpa" className="text-gray-300">GPA / Percentage</Label>
                   <Input
                     id="gpa"
+                    className="bg-white/5 border-white/10 focus:border-amber-500/50"
                     value={profile.gpa}
                     onChange={(e) => updateProfile({ gpa: e.target.value })}
                     placeholder="e.g., 3.7 or 85%"
@@ -335,10 +348,10 @@ export default function ProfilePage() {
         {/* Study Goals */}
         <TabsContent value="goals">
           <div className="space-y-6">
-            <Card className="border-border/50 bg-card/80">
+            <Card className="border-white/10 bg-black/40 backdrop-blur-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-accent" />
+                <CardTitle className="flex items-center gap-2 text-amber-500">
+                  <Target className="h-5 w-5 text-amber-500" />
                   Study Goals
                 </CardTitle>
                 <CardDescription>What you want to pursue</CardDescription>
@@ -422,9 +435,18 @@ export default function ProfilePage() {
                     </div>
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                    {COUNTRIES.map((country) => {
+                    {COUNTRIES.map((country, index) => {
                       const isSelected = profile.preferredCountries.includes(country);
                       const isDisabled = !isSelected && profile.preferredCountries.length >= 5;
+
+                      // Deterministic color assignment based on country name length or index
+                      const colorClass = [
+                        "border-cyan-500/50 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20",
+                        "border-violet-500/50 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20",
+                        "border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20",
+                        "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
+                        "border-amber-500/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20",
+                      ][index % 5];
 
                       return (
                         <button
@@ -432,13 +454,12 @@ export default function ProfilePage() {
                           type="button"
                           onClick={() => toggleCountry(country)}
                           disabled={isDisabled}
-                          className={`p-3 rounded-lg border text-left text-sm transition-colors ${
-                            isSelected
-                              ? "border-accent bg-accent/10 text-accent"
-                              : isDisabled
+                          className={`p-3 rounded-lg border text-left text-sm transition-all duration-200 ${isSelected
+                            ? colorClass + " shadow-[0_0_15px_-3px_rgba(0,0,0,0.1)] scale-[1.02]"
+                            : isDisabled
                               ? "border-border/50 bg-muted/50 text-muted-foreground cursor-not-allowed"
-                              : "border-border hover:border-accent/50 hover:bg-accent/5"
-                          }`}
+                              : "border-border hover:border-white/20 hover:bg-white/5"
+                            }`}
                         >
                           {country}
                         </button>
@@ -449,10 +470,10 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 bg-card/80">
+            <Card className="border-white/10 bg-black/40 backdrop-blur-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-accent" />
+                <CardTitle className="flex items-center gap-2 text-amber-500">
+                  <Wallet className="h-5 w-5 text-amber-500" />
                   Budget
                 </CardTitle>
                 <CardDescription>Your financial planning</CardDescription>
@@ -502,10 +523,10 @@ export default function ProfilePage() {
 
         {/* Exams & Readiness */}
         <TabsContent value="readiness">
-          <Card className="border-border/50 bg-card/80">
+          <Card className="border-white/10 bg-black/40 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardCheck className="h-5 w-5 text-accent" />
+              <CardTitle className="flex items-center gap-2 text-rose-400">
+                <ClipboardCheck className="h-5 w-5 text-rose-400" />
                 Exams & Readiness
               </CardTitle>
               <CardDescription>Your preparation status</CardDescription>
@@ -580,8 +601,8 @@ export default function ProfilePage() {
                       variant="secondary"
                       className={
                         profile.ieltsStatus === "Completed"
-                          ? "bg-green-500/10 text-green-600"
-                          : "bg-yellow-500/10 text-yellow-600"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-rose-500/10 text-rose-500"
                       }
                     >
                       {profile.ieltsStatus === "Completed" ? (
@@ -598,8 +619,8 @@ export default function ProfilePage() {
                       variant="secondary"
                       className={
                         profile.greStatus === "Completed"
-                          ? "bg-green-500/10 text-green-600"
-                          : "bg-yellow-500/10 text-yellow-600"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-rose-500/10 text-rose-500"
                       }
                     >
                       {profile.greStatus === "Completed" ? (
@@ -616,8 +637,8 @@ export default function ProfilePage() {
                       variant="secondary"
                       className={
                         profile.sopStatus === "Finalized"
-                          ? "bg-green-500/10 text-green-600"
-                          : "bg-yellow-500/10 text-yellow-600"
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-amber-500/10 text-amber-500"
                       }
                     >
                       {profile.sopStatus === "Finalized" ? (
@@ -640,13 +661,15 @@ export default function ProfilePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Profile Changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Updating your profile will trigger the following:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Recalculation of university recommendations</li>
-                <li>Updated acceptance chances for shortlisted universities</li>
-                <li>New AI-generated tasks based on your profile</li>
-              </ul>
+            <AlertDialogDescription asChild>
+              <div className="text-muted-foreground text-sm">
+                Updating your profile will trigger the following:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Recalculation of university recommendations</li>
+                  <li>Updated acceptance chances for shortlisted universities</li>
+                  <li>New AI-generated tasks based on your profile</li>
+                </ul>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

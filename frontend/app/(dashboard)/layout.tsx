@@ -1,6 +1,10 @@
 "use client";
 
-import React from "react"
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
+import { AnimatedBubbleBackground } from "@/components/animated-bubble-background";
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -12,8 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -23,9 +25,9 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { ProfileGuard } from "@/components/profile-guard";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -44,7 +46,8 @@ export default function DashboardLayout({
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <AnimatedBubbleBackground />
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -56,7 +59,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-64 bg-card border-r border-border transform transition-transform duration-200 lg:translate-x-0",
+          "fixed top-0 left-0 z-50 h-full w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-200 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -111,6 +114,13 @@ export default function DashboardLayout({
                   {user?.email || ''}
                 </p>
               </div>
+              <button
+                onClick={logout}
+                className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                title="Log out"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -119,7 +129,8 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 bg-black/40 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between h-16 px-4 lg:px-8">
             <button
               className="lg:hidden text-muted-foreground hover:text-foreground"
@@ -160,7 +171,11 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-4 lg:p-8">
+          <ProfileGuard>
+            {children}
+          </ProfileGuard>
+        </main>
       </div>
     </div>
   );
