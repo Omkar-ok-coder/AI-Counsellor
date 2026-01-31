@@ -1,5 +1,5 @@
+require('dotenv').config(); // MUST be the first line
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
@@ -9,11 +9,9 @@ const profileRoutes = require('./routes/profileRoutes');
 const universityRoutes = require('./routes/universityRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 
-dotenv.config();
-
 const app = express();
 
-// 1. ADVANCED CORS
+// 1. CORS
 app.use(cors({
     origin: "*", 
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -23,42 +21,37 @@ app.use(cors({
 
 app.use(express.json());
 
-// 2. DATABASE MIDDLEWARE - Critical for Serverless Handshake
+// 2. DATABASE MIDDLEWARE
 app.use(async (req, res, next) => {
     try {
-        // Ensure the connection is fully established before proceeding
+        console.log(`Incoming Request: ${req.method} ${req.path}`); // Verification log
         await connectDB(); 
         next();
     } catch (error) {
-        console.error("Critical: Database connection failed in middleware:", error);
-        return res.status(500).json({ 
-            error: "Database Connection Error", 
-            details: error.message 
-        });
+        console.error("Database connection failed in middleware:", error);
+        return res.status(500).json({ error: "Database Error", details: error.message });
     }
 });
 
-// 3. HEALTH CHECK & BASE ROUTES
+// 3. ROUTES
 app.get('/api', (req, res) => {
-    res.status(200).json({ status: 'success', message: 'AI Counsellor API is live!' });
+    res.status(200).json({ status: 'success', message: 'API is live!' });
 });
 
-// 4. MOUNT ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/universities', universityRoutes);
 app.use('/api/ai', aiRoutes);
 
-// 5. CATCH-ALL 404
+// 4. CATCH-ALL 404
 app.use((req, res) => {
-    res.status(404).json({ error: `Route ${req.originalUrl} not found on this server` });
+    res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
 
-// 6. LOCAL DEVELOPMENT LISTENER
+// 5. LISTENER
 const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => console.log(`Server running locally on port ${PORT}`));
-}
+app.listen(PORT, () => {
+    console.log(`Server running locally on http://localhost:${PORT}`);
+});
 
-// 7. EXPORT FOR VERCEL
 module.exports = app;
