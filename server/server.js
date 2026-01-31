@@ -13,9 +13,9 @@ dotenv.config();
 
 const app = express();
 
-// 1. ADVANCED CORS - Handles "Preflight" OPTIONS requests to prevent 405 errors
+// 1. ADVANCED CORS
 app.use(cors({
-    origin: "*", // For development; in production, use your frontend URL
+    origin: "*", 
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
     credentials: true
@@ -23,22 +23,24 @@ app.use(cors({
 
 app.use(express.json());
 
-// 2. DATABASE MIDDLEWARE - Critical for Serverless
-// This ensures the DB is connected for every request without leaking connections
+// 2. DATABASE MIDDLEWARE - Critical for Serverless Handshake
 app.use(async (req, res, next) => {
     try {
-        await connectDB(); // Ensure your connectDB function checks 'readyState' to avoid duplicate connections
+        // Ensure the connection is fully established before proceeding
+        await connectDB(); 
         next();
     } catch (error) {
-        console.error("Database connection failed:", error);
-        return res.status(500).json({ error: "Internal Server Database Error" });
+        console.error("Critical: Database connection failed in middleware:", error);
+        return res.status(500).json({ 
+            error: "Database Connection Error", 
+            details: error.message 
+        });
     }
 });
 
 // 3. HEALTH CHECK & BASE ROUTES
-// Root /api route to verify backend is live
 app.get('/api', (req, res) => {
-    res.status(200).json({ status: 'success', message: 'AI Counsellor API is running...' });
+    res.status(200).json({ status: 'success', message: 'AI Counsellor API is live!' });
 });
 
 // 4. MOUNT ROUTES
@@ -49,13 +51,13 @@ app.use('/api/ai', aiRoutes);
 
 // 5. CATCH-ALL 404
 app.use((req, res) => {
-    res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+    res.status(404).json({ error: `Route ${req.originalUrl} not found on this server` });
 });
 
 // 6. LOCAL DEVELOPMENT LISTENER
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`Server running locally on port ${PORT}`));
 }
 
 // 7. EXPORT FOR VERCEL
