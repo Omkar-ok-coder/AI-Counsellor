@@ -1,44 +1,45 @@
 const mongoose = require('mongoose');
 
-// Use global to cache the connection across serverless function calls
+/** * Global is used here to maintain a cached connection across hot reloads
+ * in development and across function executions in Vercel.
+ */
 let cached = global.mongoose;
 
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-const connectDB = async () => {
-  // If a connection already exists, return it immediately
-  if (cached.conn) {
+async function connectDB() {
+  // 1. If we have a connection, and it's actually "connected" (readyState 1)
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  // If no promise exists, create one
+  // 2. If no promise exists, start the connection
   if (!cached.promise) {
     const opts = {
-      // Allow Mongoose to buffer commands for a short time if the connection 
-      // isn't ready. This prevents "bufferCommands = false" errors.
-      bufferCommands: true, 
-      // How long to wait for a server to be selected before failing
-      serverSelectionTimeoutMS: 5000, 
+      bufferCommands: true, // MUST be true to prevent your current error
+      serverSelectionTimeoutMS: 10000, // Give Atlas more time to respond
+      socketTimeoutMS: 45000,
     };
 
-    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
-      console.log('=> New database connection established');
-      return mongoose;
+    console.log("=> Initializing new MongoDB connection...");
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongooseInstance) => {
+      console.log("=> MongoDB connected successfully.");
+      return mongooseInstance;
     });
   }
 
   try {
+    // 3. Force the code to wait until the promise is fully resolved
     cached.conn = await cached.promise;
   } catch (e) {
-    // If the connection fails, clear the promise so we can try again on the next request
-    cached.promise = null;
-    console.error('=> MongoDB connection error:', e);
-    throw e;
+    cached.promise = null; // Reset promise on failure so we can retry
+    console.error("=> MongoDB connection failed:", e.message);
+    throw new Error("Database connection could not be established.");
   }
 
   return cached.conn;
-};
+}
 
 module.exports = connectDB;
