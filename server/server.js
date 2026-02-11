@@ -1,57 +1,94 @@
-require('dotenv').config(); // MUST be the first line
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
+// MUST be first
+require("dotenv").config();
+
+const express = require("express");
+const cors = require("cors");
+const connectDB = require("./config/db");
 
 // Route Imports
-const authRoutes = require('./routes/authRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const universityRoutes = require('./routes/universityRoutes');
-const aiRoutes = require('./routes/aiRoutes');
+const authRoutes = require("./routes/authRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const universityRoutes = require("./routes/universityRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
-// 1. CORS
-app.use(cors({
-    origin: "*", 
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    credentials: true
-}));
+/* ================================
+   1. MIDDLEWARE
+================================ */
 
+// Parse JSON
 app.use(express.json());
 
-// 2. DATABASE MIDDLEWARE
-app.use(async (req, res, next) => {
-    try {
-        console.log(`Incoming Request: ${req.method} ${req.path}`); // Verification log
-        await connectDB(); 
-        next();
-    } catch (error) {
-        console.error("Database connection failed in middleware:", error);
-        return res.status(500).json({ error: "Database Error", details: error.message });
-    }
+/* ================================
+   2. FIXED CORS CONFIG
+================================ */
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://frontend-omkars-projects-c8ee7733.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// Preflight Requests
+app.options("*", cors());
+
+/* ================================
+   3. DATABASE CONNECTION
+================================ */
+
+// Connect DB once (better than connecting on every request)
+connectDB()
+  .then(() => console.log("✅ MongoDB Connected Successfully"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
+
+/* ================================
+   4. ROUTES
+================================ */
+
+// Health Check
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    server_time: new Date().toISOString(),
+  });
 });
 
-// 3. ROUTES
-app.get('/api', (req, res) => {
-    res.status(200).json({ status: 'success', message: 'API is live!' });
+// API Root Test
+app.get("/api", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "API is live!",
+  });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/universities', universityRoutes);
-app.use('/api/ai', aiRoutes);
+// Main Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/universities", universityRoutes);
+app.use("/api/ai", aiRoutes);
 
-// 4. CATCH-ALL 404
+/* ================================
+   5. 404 HANDLER
+================================ */
+
 app.use((req, res) => {
-    res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+  res.status(404).json({
+    error: `Route ${req.originalUrl} not found`,
+  });
 });
 
-// 5. LISTENER
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running locally on http://localhost:${PORT}`);
-});
+/* ================================
+   6. EXPORT FOR VERCEL
+================================ */
+
+// ❌ Do NOT use app.listen() in Vercel
+// Vercel will handle the server automatically
 
 module.exports = app;
