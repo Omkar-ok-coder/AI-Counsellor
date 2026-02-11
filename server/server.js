@@ -1,4 +1,4 @@
-// MUST be first
+// MUST be first line
 require("dotenv").config();
 
 const express = require("express");
@@ -14,14 +14,13 @@ const aiRoutes = require("./routes/aiRoutes");
 const app = express();
 
 /* ================================
-   1. MIDDLEWARE
+   1. Middleware
 ================================ */
 
-// Parse JSON
 app.use(express.json());
 
 /* ================================
-   2. FIXED CORS CONFIG
+   2. CORS Fix (IMPORTANT)
 ================================ */
 
 app.use(
@@ -36,20 +35,19 @@ app.use(
   })
 );
 
-// Preflight Requests
+// Preflight Fix
 app.options("*", cors());
 
 /* ================================
-   3. DATABASE CONNECTION
+   3. Connect MongoDB ONCE
 ================================ */
 
-// Connect DB once (better than connecting on every request)
 connectDB()
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 /* ================================
-   4. ROUTES
+   4. Routes
 ================================ */
 
 // Health Check
@@ -60,7 +58,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// API Root Test
+// API Root
 app.get("/api", (req, res) => {
   res.status(200).json({
     status: "success",
@@ -75,7 +73,7 @@ app.use("/api/universities", universityRoutes);
 app.use("/api/ai", aiRoutes);
 
 /* ================================
-   5. 404 HANDLER
+   5. 404 Handler
 ================================ */
 
 app.use((req, res) => {
@@ -85,10 +83,8 @@ app.use((req, res) => {
 });
 
 /* ================================
-   6. EXPORT FOR VERCEL
+   6. EXPORT ONLY (No app.listen)
 ================================ */
 
-// ❌ Do NOT use app.listen() in Vercel
-// Vercel will handle the server automatically
-
+// ❌ DO NOT USE app.listen() on Vercel
 module.exports = app;
